@@ -34,6 +34,8 @@ module MIPS_Testbench ();
     // you can add in a 'Halt' signal here as well to test Halt operation
     // you will be verifying your program operation using the
     // waveform viewer and/or self-checking operations
+    #200
+
 
     $display("TEST COMPLETE");
     $stop;
@@ -78,11 +80,21 @@ module Memory(CS, WE, CLK, ADDR, Mem_Bus);
 
   reg [31:0] data_out;
   reg [31:0] RAM [0:127];
+  integer i;
 
 
   initial
   begin
+    for(i = 0; i < 128; i = i + 1)begin
+      RAM[i] = 0;
+    end
     /* Write your Verilog-Text IO code here */
+    $readmemb("basic_test.txt", RAM);
+
+    for(i = 0; i < 2; i = i + 1)begin
+      $display("%d: %h", i, RAM[i]);
+    end
+    
   end
 
   assign Mem_Bus = ((CS == 1'b0) || (WE == 1'b1)) ? 32'bZ : data_out;
