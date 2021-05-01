@@ -24,6 +24,8 @@ module MIPS_Testbench ();
   begin
     RST <= 1'b1; //reset the processor
 
+    #10
+
     //Notice that the memory is initialize in the in the memory module not here
 
     @(posedge CLK);
