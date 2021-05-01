@@ -1,7 +1,7 @@
 start:
   andi  $2, $2, 0
   addi  $2, $2, 128
-rot
+rot:
   andi  $1, $1, 0
   addi  $1, $1, 1
 loop:
