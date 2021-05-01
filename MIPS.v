@@ -8,12 +8,14 @@ module MIPS_Testbench ();
   wire [6:0] Address;
   wire [7:0]OUT;
 
+  wire [6:0]PC;
+
   initial
   begin
     CLK = 0;
   end
 
-  MIPS CPU(CLK, RST, CS, WE, Address, Mem_Bus, OUT);
+  MIPS CPU(CLK, RST, CS, WE, Address, Mem_Bus, OUT, PC);
   Memory MEM(CS, WE, CLK, Address, Mem_Bus);
 
   always
@@ -37,7 +39,7 @@ module MIPS_Testbench ();
     // you can add in a 'Halt' signal here as well to test Halt operation
     // you will be verifying your program operation using the
     // waveform viewer and/or self-checking operations
-    #200
+    #1200
 
 
     $display("TEST COMPLETE");
@@ -92,7 +94,7 @@ module Memory(CS, WE, CLK, ADDR, Mem_Bus);
       RAM[i] = 0;
     end
     /* Write your Verilog-Text IO code here */
-    $readmemb("basic_test.txt", RAM);
+    $readmemb("rotate.txt", RAM);
 
     for(i = 0; i < 2; i = i + 1)begin
       $display("%d: %h", i, RAM[i]);
@@ -166,12 +168,15 @@ endmodule
 `define f_code instr[5:0]
 `define numshift instr[10:6]
 
-module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, OUT);
+module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, OUT, PC_OUT);
   input CLK, RST;
   output reg CS, WE;
   output [6:0] ADDR;
   inout [31:0] Mem_Bus;
   output [7:0]OUT;
+  
+  output [6:0]PC_OUT;
+  assign PC_OUT = pc;
 
   //special instructions (opcode == 000000), values of F code (bits 5-0):
   parameter add = 6'b100000;
