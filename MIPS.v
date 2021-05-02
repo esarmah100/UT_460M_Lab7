@@ -280,6 +280,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
           end
           else if (`opcode == andi) op = and1;
           else if (`opcode == ori) op = or1;
+          else if (`opcode == lui) op = lui;
         end
       end
       2: begin //execute
@@ -292,6 +293,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
         else if (opsave == sll) alu_result = alu_in_B << `numshift;
         else if (opsave == slt) alu_result = (alu_in_A < alu_in_B)? 32'd1 : 32'd0;
         else if (opsave == xor1) alu_result = alu_in_A ^ alu_in_B;
+        else if (opsave == lui) alu_result = alu_in_B << 16;
         if (((alu_in_A == alu_in_B)&&(`opcode == beq)) || ((alu_in_A != alu_in_B)&&(`opcode == bne))) begin
           npc = pc + imm_ext[6:0];
           nstate = 3'd0;
@@ -304,7 +306,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
       end
       3: begin //prepare to write to mem
         nstate = 3'd0;
-        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)) regw = 1;
+        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)) regw = 1;
         else if (`opcode == sw) begin
           CS = 1;
           WE = 1;
