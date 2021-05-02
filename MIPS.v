@@ -15,7 +15,7 @@ module MIPS_Testbench ();
   initial
   begin
     CLK = 0;
-    CTL = 0;
+    CTL = 5;
   end
 
   MIPS CPU(CLK, RST, CS, WE, Address, Mem_Bus, CTL, OUT, REG2_OUT, PC);
@@ -44,7 +44,7 @@ module MIPS_Testbench ();
     // waveform viewer and/or self-checking operations
     #300
 
-    CTL = 4;
+    CTL = 3;
 
     #2000
 
@@ -189,7 +189,6 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
   output [31:0]REG2_OUT;
   
   output [6:0]PC_OUT;
-  assign PC_OUT = pc;
 
   //special instructions (opcode == 000000), values of F code (bits 5-0):
   parameter add = 6'b100000;
@@ -203,6 +202,8 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
   parameter jr = 6'b001000;
   parameter ssub = 6'b110010;
   parameter sadd = 6'b110001;
+  parameter add8 = 6'b101101;
+  parameter rev = 6'b110000;
 
   //non-special instructions, values of opcodes:
   parameter addi = 6'b001000;
@@ -226,9 +227,10 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
   wire [1:0] format;
   reg [31:0] instr, alu_result;
   reg [6:0] pc, npc;
+  assign PC_OUT = pc;
   wire [31:0] imm_ext, alu_in_A, alu_in_B, reg_in, readreg1, readreg2;
   reg [31:0] alu_result_save;
-  wire [32:0] alu_overflow = {1'b0, alu_in_A} + {1'b0, alu_in_B};;
+  wire [32:0] alu_overflow = {1'b0, alu_in_A} + {1'b0, alu_in_B};
   reg alu_or_mem, alu_or_mem_save, regw, writing, reg_or_imm, reg_or_imm_save, pc_or_reg, pc_or_reg_save;
   reg fetchDorI;
   wire [4:0] dr;
@@ -236,7 +238,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
 
   //combinational
   assign imm_ext = (instr[15] == 1)? {16'hFFFF, instr[15:0]} : {16'h0000, instr[15:0]};//Sign extend immediate field
-  assign dr = (format == J) ? 5'd31 : (format == R)? instr[15:11] : instr[20:16]; //Destination Register MUX (MUX1)
+  assign dr = (format == J) ? 5'd31 : (opsave == rev)? instr[25:21] : (format == R)? instr[15:11] : instr[20:16]; //Destination Register MUX (MUX1)
   assign alu_in_A = (pc_or_reg_save)? pc : readreg1;
   assign alu_in_B = (reg_or_imm_save)? imm_ext : readreg2; //ALU MUX (MUX2)
   assign reg_in = (alu_or_mem_save)? Mem_Bus : alu_result_save; //Data MUX
@@ -299,6 +301,8 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
           else if (`opcode == lui) op = lui;
           else if (`opcode == ssub) op = ssub;
           else if (`opcode == sadd) op = sadd;
+          else if (`opcode == add8) op = add8;
+          else if (`opcode == rev) op = rev;
         end
       end
       2: begin //execute
@@ -314,6 +318,18 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
         else if (opsave == lui) alu_result = alu_in_B << 16;
         else if (opsave == ssub) alu_result = (alu_in_A < alu_in_B)? 0 : alu_in_A - alu_in_B;
         else if (opsave == sadd) alu_result = (alu_overflow[32])? 32'hFFFFFFFF : alu_in_A + alu_in_B;
+        else if (opsave == add8) begin
+          alu_result[31:24] = alu_in_A[31:24] + alu_in_B[31:24];
+          alu_result[23:16] = alu_in_A[23:16] + alu_in_B[23:16];          
+          alu_result[15:8] = alu_in_A[15:8] + alu_in_B[15:8];
+          alu_result[7:0] = alu_in_A[7:0] + alu_in_B[7:0];
+        end
+        else if (opsave == rev) begin
+          alu_result[31:24] = alu_in_B[7:0];
+          alu_result[23:16] = alu_in_B[15:8];          
+          alu_result[15:8] = alu_in_B[23:16];
+          alu_result[7:0] = alu_in_B[31:24];
+        end
         else if (opsave == jal) begin
           alu_result = alu_in_A;
           npc = instr[6:0];
@@ -330,7 +346,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
       end
       3: begin //prepare to write to mem
         nstate = 3'd0;
-        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)||(`opcode == jal)||(`opcode == ssub)||(`opcode == sadd)) regw = 1;
+        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)||(`opcode == jal)||(`opcode == ssub)||(`opcode == sadd)||(`opcode == add8)||(`opcode == rev)) regw = 1;
         else if (`opcode == sw) begin
           CS = 1;
           WE = 1;
