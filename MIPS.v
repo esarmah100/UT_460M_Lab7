@@ -204,6 +204,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
   parameter sadd = 6'b110001;
   parameter add8 = 6'b101101;
   parameter rev = 6'b110000;
+  parameter rbit = 6'b101111;
 
   //non-special instructions, values of opcodes:
   parameter addi = 6'b001000;
@@ -238,7 +239,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
 
   //combinational
   assign imm_ext = (instr[15] == 1)? {16'hFFFF, instr[15:0]} : {16'h0000, instr[15:0]};//Sign extend immediate field
-  assign dr = (format == J) ? 5'd31 : (opsave == rev)? instr[25:21] : (format == R)? instr[15:11] : instr[20:16]; //Destination Register MUX (MUX1)
+  assign dr = (format == J) ? 5'd31 : ((opsave == rev) || (opsave == rbit))? instr[25:21] : (format == R)? instr[15:11] : instr[20:16]; //Destination Register MUX (MUX1)
   assign alu_in_A = (pc_or_reg_save)? pc : readreg1;
   assign alu_in_B = (reg_or_imm_save)? imm_ext : readreg2; //ALU MUX (MUX2)
   assign reg_in = (alu_or_mem_save)? Mem_Bus : alu_result_save; //Data MUX
@@ -303,6 +304,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
           else if (`opcode == sadd) op = sadd;
           else if (`opcode == add8) op = add8;
           else if (`opcode == rev) op = rev;
+          else if (`opcode == rbit) op = rbit;
         end
       end
       2: begin //execute
@@ -330,6 +332,25 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
           alu_result[15:8] = alu_in_B[23:16];
           alu_result[7:0] = alu_in_B[31:24];
         end
+        else if (opsave == rbit) begin
+          alu_result[31] = alu_in_B[0];     alu_result[30] = alu_in_B[1];
+          alu_result[29] = alu_in_B[2];     alu_result[28] = alu_in_B[3];
+          alu_result[27] = alu_in_B[4];     alu_result[26] = alu_in_B[5];
+          alu_result[25] = alu_in_B[6];     alu_result[24] = alu_in_B[7];
+          alu_result[23] = alu_in_B[8];     alu_result[22] = alu_in_B[9];
+          alu_result[21] = alu_in_B[10];    alu_result[20] = alu_in_B[11];
+          alu_result[19] = alu_in_B[12];    alu_result[18] = alu_in_B[13];
+          alu_result[17] = alu_in_B[14];    alu_result[16] = alu_in_B[15];
+          alu_result[15] = alu_in_B[16];    alu_result[14] = alu_in_B[17];
+          alu_result[13] = alu_in_B[18];    alu_result[12] = alu_in_B[19];
+          alu_result[11] = alu_in_B[20];    alu_result[10] = alu_in_B[21];
+          alu_result[9] = alu_in_B[22];     alu_result[8] = alu_in_B[23];
+          alu_result[7] = alu_in_B[24];     alu_result[6] = alu_in_B[25];
+          alu_result[5] = alu_in_B[26];     alu_result[4] = alu_in_B[27];
+          alu_result[3] = alu_in_B[28];     alu_result[2] = alu_in_B[29];
+          alu_result[1] = alu_in_B[30];     alu_result[0] = alu_in_B[31];
+          
+        end
         else if (opsave == jal) begin
           alu_result = alu_in_A;
           npc = instr[6:0];
@@ -346,7 +367,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
       end
       3: begin //prepare to write to mem
         nstate = 3'd0;
-        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)||(`opcode == jal)||(`opcode == ssub)||(`opcode == sadd)||(`opcode == add8)||(`opcode == rev)) regw = 1;
+        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)||(`opcode == jal)||(`opcode == ssub)||(`opcode == sadd)||(`opcode == add8)||(`opcode == rev)||(`opcode == rbit)) regw = 1;
         else if (`opcode == sw) begin
           CS = 1;
           WE = 1;
