@@ -265,9 +265,12 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
         if (format == J) begin //jump, and finish
           if(`opcode == jal) begin
                op = jal;
+               npc = instr[6:0];
           end
-          npc = instr[6:0];
-          nstate = 3'd0;
+          else begin
+            npc = instr[6:0];
+            nstate = 3'd0;
+          end
         end
         else if (format == R) //register instructions
           op = `f_code;
