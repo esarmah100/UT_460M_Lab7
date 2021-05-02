@@ -143,7 +143,7 @@ module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, CTL, OUT, REG2_O
   reg [31:0] REG [0:31];
   integer i;
 
-  assign OUT = REG[1][7:0];
+  assign OUT = REG[31][7:0];
   assign REG2_OUT = REG[2];
 
   initial begin
@@ -226,7 +226,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
   reg [6:0] pc, npc;
   wire [31:0] imm_ext, alu_in_A, alu_in_B, reg_in, readreg1, readreg2;
   reg [31:0] alu_result_save;
-  reg alu_or_mem, alu_or_mem_save, regw, writing, reg_or_imm, reg_or_imm_save;
+  reg alu_or_mem, alu_or_mem_save, regw, writing, reg_or_imm, reg_or_imm_save, pc_or_reg, pc_or_reg_save;
   reg fetchDorI;
   wire [4:0] dr;
   reg [2:0] state, nstate;
@@ -234,7 +234,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
   //combinational
   assign imm_ext = (instr[15] == 1)? {16'hFFFF, instr[15:0]} : {16'h0000, instr[15:0]};//Sign extend immediate field
   assign dr = (format == J) ? 5'd31 : (format == R)? instr[15:11] : instr[20:16]; //Destination Register MUX (MUX1)
-  assign alu_in_A = readreg1;
+  assign alu_in_A = (pc_or_reg_save)? pc : readreg1;
   assign alu_in_B = (reg_or_imm_save)? imm_ext : readreg2; //ALU MUX (MUX2)
   assign reg_in = (alu_or_mem_save)? Mem_Bus : alu_result_save; //Data MUX
   assign format = (`opcode == 6'd0)? R : ((`opcode == 6'd2) ||(`opcode == 6'd3) ? J : I);
@@ -248,17 +248,19 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
     op = and1; opsave = and1;
     state = 3'b0; nstate = 3'b0;
     alu_or_mem = 0;
+    pc_or_reg = 0;
     regw = 0;
     fetchDorI = 0;
     writing = 0;
     reg_or_imm = 0; reg_or_imm_save = 0;
     alu_or_mem_save = 0;
+    pc_or_reg_save = 0;
   end
 
   always @(*)
   begin
     fetchDorI = 0; CS = 0; WE = 0; regw = 0; writing = 0; alu_result = 32'd0;
-    npc = pc; op = jr; reg_or_imm = 0; alu_or_mem = 0; nstate = 3'd0;
+    npc = pc; op = jr; reg_or_imm = 0; alu_or_mem = 0; nstate = 3'd0; pc_or_reg = 0;
     case (state)
       0: begin //fetch
         npc = pc + 7'd1; CS = 1; nstate = 3'd1;
@@ -269,7 +271,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
         if (format == J) begin //jump, and finish
           if(`opcode == jal) begin
                op = jal;
-               npc = instr[6:0];
+               pc_or_reg = 1;
           end
           else begin
             npc = instr[6:0];
@@ -305,7 +307,10 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
         else if (opsave == slt) alu_result = (alu_in_A < alu_in_B)? 32'd1 : 32'd0;
         else if (opsave == xor1) alu_result = alu_in_A ^ alu_in_B;
         else if (opsave == lui) alu_result = alu_in_B << 16;
-        else if (opsave == jal) alu_result = pc + 7'd1;
+        else if (opsave == jal) begin
+          alu_result = alu_in_A;
+          npc = instr[6:0];
+        end
         if (((alu_in_A == alu_in_B)&&(`opcode == beq)) || ((alu_in_A != alu_in_B)&&(`opcode == bne))) begin
           npc = pc + imm_ext[6:0];
           nstate = 3'd0;
@@ -318,7 +323,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
       end
       3: begin //prepare to write to mem
         nstate = 3'd0;
-        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)) regw = 1;
+        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)||(`opcode == jal)) regw = 1;
         else if (`opcode == sw) begin
           CS = 1;
           WE = 1;
@@ -353,6 +358,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
       opsave <= op;
       reg_or_imm_save <= reg_or_imm;
       alu_or_mem_save <= alu_or_mem;
+      pc_or_reg_save <= pc_or_reg;
     end
     else if (state == 3'd2) alu_result_save <= alu_result;
 
