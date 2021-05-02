@@ -7,6 +7,7 @@ module MIPS_Testbench ();
   wire [31:0] Mem_Bus;
   wire [6:0] Address;
   wire [7:0]OUT;
+  wire [31:0]REG2_OUT;
 
   wire [6:0]PC;
 
@@ -15,7 +16,7 @@ module MIPS_Testbench ();
     CLK = 0;
   end
 
-  MIPS CPU(CLK, RST, CS, WE, Address, Mem_Bus, OUT, PC);
+  MIPS CPU(CLK, RST, CS, WE, Address, Mem_Bus, OUT, REG2_OUT, PC);
   Memory MEM(CS, WE, CLK, Address, Mem_Bus);
 
   always
@@ -120,7 +121,7 @@ endmodule
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, OUT);
+module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, OUT, REG2_OUT);
   input CLK;
   input RegW;
   input [4:0] DR;
@@ -130,11 +131,13 @@ module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, OUT);
   output reg [31:0] ReadReg1;
   output reg [31:0] ReadReg2;
   output [7:0]OUT;
+  output [31:0]REG2_OUT;
 
   reg [31:0] REG [0:31];
   integer i;
 
   assign OUT = REG[1][7:0];
+  assign REG2_OUT = REG[2];
 
   initial begin
     ReadReg1 = 0;
@@ -168,12 +171,13 @@ endmodule
 `define f_code instr[5:0]
 `define numshift instr[10:6]
 
-module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, OUT, PC_OUT);
+module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, OUT, REG2_OUT, PC_OUT);
   input CLK, RST;
   output reg CS, WE;
   output [6:0] ADDR;
   inout [31:0] Mem_Bus;
   output [7:0]OUT;
+  output [31:0]REG2_OUT;
   
   output [6:0]PC_OUT;
   assign PC_OUT = pc;
@@ -227,7 +231,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, OUT, PC_OUT);
 
   //drive memory bus only during writes
   assign ADDR = (fetchDorI)? pc : alu_result_save[6:0]; //ADDR Mux
-  REG Register(CLK, regw, dr, `sr1, `sr2, reg_in, readreg1, readreg2, OUT);
+  REG Register(CLK, regw, dr, `sr1, `sr2, reg_in, readreg1, readreg2, OUT, REG2_OUT);
 
   initial begin
     op = and1; opsave = and1;
