@@ -44,9 +44,9 @@ module MIPS_Testbench ();
     // waveform viewer and/or self-checking operations
     #300
 
-    CTL = 5;
+    CTL = 4;
 
-    #700
+    #2000
 
 
     $display("TEST COMPLETE");
@@ -202,6 +202,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
   parameter sll = 6'b000000;
   parameter jr = 6'b001000;
   parameter ssub = 6'b110010;
+  parameter sadd = 6'b110001;
 
   //non-special instructions, values of opcodes:
   parameter addi = 6'b001000;
@@ -227,6 +228,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
   reg [6:0] pc, npc;
   wire [31:0] imm_ext, alu_in_A, alu_in_B, reg_in, readreg1, readreg2;
   reg [31:0] alu_result_save;
+  wire [32:0] alu_overflow = {1'b0, alu_in_A} + {1'b0, alu_in_B};;
   reg alu_or_mem, alu_or_mem_save, regw, writing, reg_or_imm, reg_or_imm_save, pc_or_reg, pc_or_reg_save;
   reg fetchDorI;
   wire [4:0] dr;
@@ -296,6 +298,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
           else if (`opcode == ori) op = or1;
           else if (`opcode == lui) op = lui;
           else if (`opcode == ssub) op = ssub;
+          else if (`opcode == sadd) op = sadd;
         end
       end
       2: begin //execute
@@ -309,11 +312,12 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
         else if (opsave == slt) alu_result = (alu_in_A < alu_in_B)? 32'd1 : 32'd0;
         else if (opsave == xor1) alu_result = alu_in_A ^ alu_in_B;
         else if (opsave == lui) alu_result = alu_in_B << 16;
+        else if (opsave == ssub) alu_result = (alu_in_A < alu_in_B)? 0 : alu_in_A - alu_in_B;
+        else if (opsave == sadd) alu_result = (alu_overflow[32])? 32'hFFFFFFFF : alu_in_A + alu_in_B;
         else if (opsave == jal) begin
           alu_result = alu_in_A;
           npc = instr[6:0];
         end
-        else if (opsave == ssub) alu_result = (alu_in_A < alu_in_B)? 0 : alu_in_A - alu_in_B;
         if (((alu_in_A == alu_in_B)&&(`opcode == beq)) || ((alu_in_A != alu_in_B)&&(`opcode == bne))) begin
           npc = pc + imm_ext[6:0];
           nstate = 3'd0;
@@ -326,7 +330,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
       end
       3: begin //prepare to write to mem
         nstate = 3'd0;
-        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)||(`opcode == jal)||(`opcode == ssub)) regw = 1;
+        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)||(`opcode == jal)||(`opcode == ssub)||(`opcode == sadd)) regw = 1;
         else if (`opcode == sw) begin
           CS = 1;
           WE = 1;
