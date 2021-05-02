@@ -44,7 +44,7 @@ module MIPS_Testbench ();
     // waveform viewer and/or self-checking operations
     #300
 
-    CTL = 1;
+    CTL = 5;
 
     #700
 
@@ -201,6 +201,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
   parameter srl = 6'b000010;
   parameter sll = 6'b000000;
   parameter jr = 6'b001000;
+  parameter ssub = 6'b110010;
 
   //non-special instructions, values of opcodes:
   parameter addi = 6'b001000;
@@ -294,6 +295,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
           else if (`opcode == andi) op = and1;
           else if (`opcode == ori) op = or1;
           else if (`opcode == lui) op = lui;
+          else if (`opcode == ssub) op = ssub;
         end
       end
       2: begin //execute
@@ -311,6 +313,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
           alu_result = alu_in_A;
           npc = instr[6:0];
         end
+        else if (opsave == ssub) alu_result = (alu_in_A < alu_in_B)? 0 : alu_in_A - alu_in_B;
         if (((alu_in_A == alu_in_B)&&(`opcode == beq)) || ((alu_in_A != alu_in_B)&&(`opcode == bne))) begin
           npc = pc + imm_ext[6:0];
           nstate = 3'd0;
@@ -323,7 +326,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
       end
       3: begin //prepare to write to mem
         nstate = 3'd0;
-        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)||(`opcode == jal)) regw = 1;
+        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)||(`opcode == jal)||(`opcode == ssub)) regw = 1;
         else if (`opcode == sw) begin
           CS = 1;
           WE = 1;
