@@ -207,6 +207,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
   parameter beq = 6'b000100;
   parameter bne = 6'b000101;
   parameter j = 6'b000010;
+  parameter lui = 6'b001111;
 
   //instruction format
   parameter R = 2'd0;
