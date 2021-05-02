@@ -237,7 +237,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
   assign alu_in_A = readreg1;
   assign alu_in_B = (reg_or_imm_save)? imm_ext : readreg2; //ALU MUX (MUX2)
   assign reg_in = (alu_or_mem_save)? Mem_Bus : alu_result_save; //Data MUX
-  assign format = (`opcode == 6'd0)? R : ((`opcode == 6'd2)? J : I);
+  assign format = (`opcode == 6'd0)? R : ((`opcode == 6'd2) ||(`opcode == 6'd3) ? J : I);
   assign Mem_Bus = (writing)? readreg2 : 32'bZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ;
 
   //drive memory bus only during writes
