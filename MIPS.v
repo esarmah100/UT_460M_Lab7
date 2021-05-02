@@ -44,9 +44,23 @@ module MIPS_Testbench ();
     // waveform viewer and/or self-checking operations
     #300
 
-    CTL = 3;
+    CTL = 0;
+    #300
 
-    #2000
+    CTL = 1;
+    #300
+
+    CTL = 2;
+    #300
+
+    CTL = 3;
+    #300
+
+    CTL = 4;
+    #300
+
+    CTL = 5;
+    #1000
 
 
     $display("TEST COMPLETE");
