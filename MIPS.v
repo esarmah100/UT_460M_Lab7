@@ -42,7 +42,11 @@ module MIPS_Testbench ();
     // you can add in a 'Halt' signal here as well to test Halt operation
     // you will be verifying your program operation using the
     // waveform viewer and/or self-checking operations
-    #1200
+    #300
+
+    CTL = 1;
+
+    #700
 
 
     $display("TEST COMPLETE");
