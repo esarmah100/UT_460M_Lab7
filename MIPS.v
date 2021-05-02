@@ -143,7 +143,7 @@ module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, CTL, OUT, REG2_O
   reg [31:0] REG [0:31];
   integer i;
 
-  assign OUT = REG[31][7:0];
+  assign OUT = REG[1][7:0];
   assign REG2_OUT = REG[2];
 
   initial begin
