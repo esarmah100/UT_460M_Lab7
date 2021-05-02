@@ -2,7 +2,6 @@
 module MIPS_Testbench ();
   reg CLK;
   reg RST;
-  reg [2:0]CTL;
   wire CS;
   wire WE;
   wire [31:0] Mem_Bus;
@@ -15,10 +14,9 @@ module MIPS_Testbench ();
   initial
   begin
     CLK = 0;
-    CTL = 0;
   end
 
-  MIPS CPU(CLK, RST, CS, WE, Address, Mem_Bus, CTL, OUT, REG2_OUT, PC);
+  MIPS CPU(CLK, RST, CS, WE, Address, Mem_Bus, OUT, REG2_OUT, PC);
   Memory MEM(CS, WE, CLK, Address, Mem_Bus);
 
   always
@@ -97,7 +95,7 @@ module Memory(CS, WE, CLK, ADDR, Mem_Bus);
       RAM[i] = 0;
     end
     /* Write your Verilog-Text IO code here */
-    $readmemb("test.txt", RAM);
+    $readmemb("rotate.txt", RAM);
 
     for(i = 0; i < 2; i = i + 1)begin
       $display("%d: %h", i, RAM[i]);
@@ -123,7 +121,7 @@ endmodule
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, CTL, OUT, REG2_OUT);
+module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, OUT, REG2_OUT);
   input CLK;
   input RegW;
   input [4:0] DR;
@@ -132,7 +130,6 @@ module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, CTL, OUT, REG2_O
   input [31:0] Reg_In;
   output reg [31:0] ReadReg1;
   output reg [31:0] ReadReg2;
-  input [2:0]CTL;
   output [7:0]OUT;
   output [31:0]REG2_OUT;
 
@@ -152,7 +149,6 @@ module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, CTL, OUT, REG2_O
 
   always @(posedge CLK)
   begin
-    REG[1] <= CTL;
 
     if(RegW == 1'b1)
       REG[DR] <= Reg_In[31:0];
@@ -175,12 +171,11 @@ endmodule
 `define f_code instr[5:0]
 `define numshift instr[10:6]
 
-module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
+module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, OUT, REG2_OUT, PC_OUT);
   input CLK, RST;
   output reg CS, WE;
   output [6:0] ADDR;
   inout [31:0] Mem_Bus;
-  input [2:0]CTL;
   output [7:0]OUT;
   output [31:0]REG2_OUT;
   
@@ -236,7 +231,7 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus, CTL, OUT, REG2_OUT, PC_OUT);
 
   //drive memory bus only during writes
   assign ADDR = (fetchDorI)? pc : alu_result_save[6:0]; //ADDR Mux
-  REG Register(CLK, regw, dr, `sr1, `sr2, reg_in, readreg1, readreg2, CTL, OUT, REG2_OUT);
+  REG Register(CLK, regw, dr, `sr1, `sr2, reg_in, readreg1, readreg2, OUT, REG2_OUT);
 
   initial begin
     op = and1; opsave = and1;
